@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1 id="app">{{text}}</h1>
+
+    <script>
+        let app = document.querySelector("#app")
+        var socket = new WebSocket('ws://localhost:8000/ws/some_url/')
+
+        socket.onmessage = (event) =>{
+            var data = JSON.parse(event.data)
+            console.log(data.data)
+            app.innerHTML = data.data
+        }
+
+    </script>
+</body>
+</html>
