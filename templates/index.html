@@ -1,23 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Farm</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        .card-transition {
+            transition: opacity 0.3s ease-in-out; /* Change the transition effect as needed */
+            opacity: 1; /* Initially visible */
+        }
+
+        .card-hidden {
+            opacity: 0; /* Hidden state */
+            pointer-events: none; /* Disable interaction when hidden */
+        }
+    </style>
 </head>
 <body>
-    <h1 id="app">{{text}}</h1>
+    <div class="row g-2 d-flex align-items-center justify-content-center vh-100 vw-100"  style="
+    background-image: url('https://img.freepik.com/free-vector/futuristic-technologies-farm_33099-2035.jpg?w=1800&t=st=1695995199~exp=1695995799~hmac=9320e179d1053e9fdd83efa4a5f195d8d34371f5584a10575c000b8fd2a8272b')
+    ;">
+        <div class="col-md d-flex align-items-center justify-content-center flex-column  align-items-stretch m-lg-5 p-lg-5">
+            
+            <div id="humidity_card" class="card text-white bg-secondary mb-3 card-transition" style="max-width: 18rem;">
+                <div class="card-header">Humidity</div>
+                <div class="card-body">
+                  <h1 id="humidity_value" class="card-title text-center">Not available</h1>
+                </div>
+            </div>
+            <div id="light_card" class="card text-white bg-primary mb-3 card-transition" style="max-width: 18rem;">
+                <div class="card-header">Light</div>
+                <div class="card-body">
+                  <h1 id="light_value" class="card-title text-center">Not available</h1>
+                </div>
+            </div>
+            <div id="temperature_card" class="card text-white bg-success mb-3 card-transition" style="max-width: 18rem;">
+                <div class="card-header">Temperature</div>
+                <div class="card-body">
+                  <h1 id="temperature_value" class="card-title text-center">Not available</h1>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md d-flex align-items-center justify-content-center flex-column align-items-stretch">
+            <div class="card text-white bg-dark mb-3" style="max-width: 28rem;">
+                <div class="card-header">Input</div>
+                <div class="card-body">
+                        <select id="date_select" class="form-select form-select-lg mb-3 " aria-label=".form-select-lg example">
+                            <option selected>Select date</option>
+                        </select>
+                </div>
+            </div>
+            <div class="card text-dark bg-info mb-3" style="max-width: 28rem;">
+                <div class="card-header">What data do you need?</div>
+                <div class="card-body">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="humidity" checked>
+                        <label class="form-check-label" for="flexSwitchCheckChecked">Humidity</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="light" checked>
+                        <label class="form-check-label" for="flexSwitchCheckChecked">Light</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="temperature" checked>
+                        <label class="form-check-label" for="flexSwitchCheckChecked">Temperature</label>
+                    </div>
+                </div>
+            </div>
+          
+        </div>
+      </div>
+    
 
+
+
+      
     <script>
+
+        const date_select_container = document.querySelector("#date_select")
+        const light_card = document.querySelector("#light_card")
+        const temperature_card = document.querySelector("#temperature_card")
+        const switches = document.querySelectorAll(".form-check-input");
+        const temperature_value = document.querySelector("#temperature_value")
+        const light_value = document.querySelector("#light_value")
+        const humidity_value = document.querySelector("#humidity_value")
+
+
+
+        switches.forEach(switchElement => {
+            switchElement.addEventListener('click',()=> {
+                const switchId = switchElement.id;
+                const card = document.querySelector(`#${switchId}_card`)
+                if (switchElement.checked) {
+                    card.classList.remove('card-hidden'); // Show the card
+                    console.log(card.classList)
+                } else {
+                    card.classList.add('card-hidden'); // Hide the card
+                    console.log(card.classList)
+                }
+            })
+            
+        });
+        
+
+        
         let app = document.querySelector("#app")
         var socket = new WebSocket('ws://localhost:8000/ws/some_url/')
 
         socket.onmessage = (event) =>{
-            var data = JSON.parse(event.data)
-            console.log(data.data)
-            app.innerHTML = data.data
+            const parsed_data = JSON.parse(event.data)
+            if(parsed_data.hasOwnProperty('data')) {
+                var data = JSON.parse(event.data)
+                const all_dates = data.data
+                all_dates.forEach((date)=>{
+                    const updated_date_clone = clone_update_date(date)
+                    date_select_container.appendChild(updated_date_clone)
+                })
+                
+            } 
+            else if(parsed_data.hasOwnProperty('light_value')) {
+                light_value.innerText = parsed_data.light_value
+                humidity_value.innerText = parsed_data.humidity_value
+                temperature_value.innerText = parsed_data.temperature_value
+            }
+            console.log(parsed_data)
+        }
+        // Add an event listener for the 'change' event on the select element
+        date_select_container.addEventListener('change', function () {
+            // Get the selected date value
+            const selectedDate = date_select_container.value;
+
+            // Check if a valid date is selected (not "Select date")
+            if (selectedDate !== 'Select date') {
+                // Send the selected date as a WebSocket message to the server
+                const message = { selected_date: selectedDate };
+                socket.send(JSON.stringify(message));
+            }
+            else {
+                light_value.innerText = 'Not available'
+                humidity_value.innerText = 'Not available'
+                temperature_value.innerText = 'Not available'
+             }
+        });
+
+        const clone_update_date = (date_data) =>{
+            const date_option = document.createElement('option')
+            date_option.setAttribute('value', date_data)
+            date_option.textContent = date_data; 
+            return date_option
         }
 
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+    
 </body>
 </html>
